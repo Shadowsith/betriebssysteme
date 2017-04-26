@@ -1,0 +1,53 @@
+####################################################################
+# Insepction of assembler code and debugging of example lowlevel.c
+# Learn
+#  - how calls to kernel routines are done via a trap call
+#  - that syscalls have different numbers on different platforms
+#
+# 01.04.12 : FABR
+# Force static linking of libc
+# Otherwise the code for the library function is not included in the binary.
+#
+# 21.03.13 : FABR
+# Adjusted doc to Mint 14 with kernel
+# $ uname -a
+# Linux latitude 3.5.0-25-generic #39-Ubuntu SMP Mon Feb 25 18:26:58 UTC 2013
+# x86_64 x86_64 x86_64 GNU/Linux
+
+############################################################
+# build
+
+make clean; make
+
+############################################################
+# Via debug and disassemble
+
+gdb -tui bin/lowlevel
+
+(gdb) break main
+(gdb) run 
+(gdb) layout asm
+
+On a 64bit machine the code for syscall open is 0x2
+On a 32bit machine the code for syscall open is 0x5
+
+(gdb) stepi
+	now watch the execution of single machine instructions
+	until you reach the code
+
+00x417267 <open64+7>            jne    0x41727d <open64+29>
+0x417269 <__open_nocancel>      mov    $0x2,%eax
+0x41726e <__open_nocancel+5>    syscall        
+0x417270 <__open_nocancel+7>    cmp    $0xfffffffffffff001,%rax 
+0x417276 <__open_nocancel+13>   jae    0x419ff0 <__syscall_error>
+0x41727c <__open_nocancel+19>   retq 
+
+Quit demo here.
+
+Switch off tui mode via 'Ctrl-x a'.
+Then quit GDB with 'Ctrl-d'.
+
+Otherwise you may get an error report like this:
+'Assertion `gdbarch != NULL'
+Ignore error and do not opt for writing a core file.
+Just quit with 'Ctrl-d'.

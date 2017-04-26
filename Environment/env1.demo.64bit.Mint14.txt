@@ -1,0 +1,95 @@
+###################################
+# 01.04.12 FABR
+# Learn howto debug the environment list
+#
+# 22.03.2013
+# Update for SS2013
+
+make clean; make
+
+# run
+bin/env1 | less
+
+MATE_DESKTOP_SESSION_ID=this-is-deprecated
+SSH_AGENT_PID=2160
+GPG_AGENT_INFO=/tmp/keyring-Qldb0b/gpg:0:1
+TERM=xterm
+...
+
+######################
+# Debug
+
+gdb -tui bin/env1
+
+11      int main() {   
+12          int i;    
+13                   
+14          for (i=0; environ[i] != NULL; i++) {
+15              printf("%s\n", environ[i]);    
+16          }                                 
+17          exit(0);                         
+18      }                                   
+
+
+(gdb) break 15
+(gdb) run
+(gdb) layout asm
+
+
+B+>0x4005ed <main+17>              mov    0x200a4c(%rip),%rax    
+   0x4005f4 <main+24>              mov    -0x4(%rbp),%edx       
+   0x4005f7 <main+27>              movslq %edx,%rdx            
+ 
+The Instruction at the breakpoint loads the base address of the array environ
+into register
+
+$rax
+
+Execute the statement via stepi
+
+(gdb) stepi
+
+B+ 0x4005ed <main+17>              mov    0x200a4c(%rip),%rax    
+  >0x4005f4 <main+24>              mov    -0x4(%rbp),%edx       
+   0x4005f7 <main+27>              movslq %edx,%rdx            
+
+Here, switch off TUI mode in order to get more space:  Ctrl-X a
+
+Dump the array of pointers: on 64bit we use 'g' for 8 byte pointers
+
+x /48xg $rax
+
+0x7fffffffe758: 0x00007fffffffea3f      0x00007fffffffea6a
+0x7fffffffe768: 0x00007fffffffea7d      0x00007fffffffeaa8
+0x7fffffffe778: 0x00007fffffffeab8      0x00007fffffffeac3
+0x7fffffffe788: 0x00007fffffffeb14      0x00007fffffffeb3d
+...
+
+0x7fffffffe868: 0x00007fffffffef26      0x00007fffffffef49
+0x7fffffffe878: 0x00007fffffffef5e      0x00007fffffffef8b
+0x7fffffffe888: 0x0000000000000000      0x0000000000000021
+0x7fffffffe898: 0x00007ffff7ffb000      0x0000000000000010
+
+Note the NULL-Pointer in line  
+0x7fffffffe888: 0x0000000000000000      0x0000000000000021
+
+(position may vary according to your env)
+
+Examine the strings the pointer point to
+
+(gdb) x /s 0x00007fffffffee37
+0x7fffffffee37: "LOGNAME=regensbu"
+
+(gdb) x /s 0x00007fffffffef5e
+0x7fffffffef5e: "XAUTHORITY=/export/home/regensbu/.Xauthority"
+
+...
+
+Quit demo here
+
+Addtional documentation explaining the global variable environ:
+
+man environ
+
+It is part of the exec* calls for process chaining.
+

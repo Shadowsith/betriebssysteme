@@ -1,0 +1,4 @@
+Enter TUI mode: Ctrl-x a
+Leave TUI mode: Ctrl-x a
+Refresh output: Ctrl-l
+

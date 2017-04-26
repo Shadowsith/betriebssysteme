@@ -1,0 +1,77 @@
+####################################################################
+# Insepction of assembler code and debugging of example highlevel.c
+# Learn how portable C-library functions call syscall interface.
+#
+# 01.04.12 : FABR
+# Force static linking of libc
+# Otherwise the code for the library function is not included in the binary.
+#
+# 21.03.13 : FABR
+# Adjusted to Mint 13/14 and kernel 3.x
+
+############################################################
+# build
+
+make clean; make
+
+############################################################
+# debug and disassemble
+
+gdb -tui bin/highlevel
+
+Finding the correct path to the syscall open via stepi/nexti is a bit tricky
+since there are man diversions ins the c-lib function fopen.
+
+Take this as a route:
+#0  0x000000000041bde0 in open64 ()
+#1  0x0000000000405949 in _IO_new_file_fopen ()
+#2  0x000000000040262e in fopen64 ()
+#3  0x00000000004011a9 in main () at highlevel.c:9
+
+For a safeguard, set break points as well:
+
+(gdb) break main
+(gdb) break fopen64
+(gdb) break open64
+
+(gdb) run 
+(gdb) layout asm
+
+Either use stepi/nexti with the route above or cheat using
+the breakpoints via cont
+
+(gdb) cont
+
+0x4025b0 <fopen64>      mov    %rbx,-0x18(%rsp)
+0x4025b5 <fopen64+5>    mov    %rbp,-0x10(%rsp)
+
+(gdb) cont
+
+0x41bde0 <open64>               cmpl   $0x0,0x2aa0f5(%rip) 
+0x41bde7 <open64+7>             jne    0x41bdfd <open64+29>
+0x41bde9 <__open_nocancel>      mov    $0x2,%eax
+0x41bdee <__open_nocancel+5>    syscall   
+
+Right before the syscall inspect registers.
+  Register $eax holds the syscall number
+  Register $rdi contains a pointer to the filename
+
+(gdb) x /s $rdi
+0x49678a:       "DerWerwolf.txt"
+
+(gdb) where
+#0  0x000000000041bde0 in open64 ()
+#1  0x0000000000405949 in _IO_new_file_fopen ()
+#2  0x000000000040262e in fopen64 ()
+#3  0x00000000004011a9 in main () at highlevel.c:9
+
+Quit demo here.
+
+Switch off tui mode via 'Ctrl-x a'.
+Then quit GDB with 'Ctrl-d'.
+
+Otherwise you may get an error report like this:
+'Assertion `gdbarch != NULL'
+Ignore error and do not opt for writing a core file.
+Just quit with 'Ctrl-d'.
+

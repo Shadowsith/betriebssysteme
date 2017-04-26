@@ -1,0 +1,67 @@
+####################################################################
+# Insepction of assembler code and debugging of example lowlevel.c
+# Learn
+#  - how calls to kernel routines are done via a trap call
+#  - that syscalls have different numbers on different platforms
+#
+# 01.04.12 : FABR
+# Force static linking of libc
+# Otherwise the code for the library function is not included in the binary.
+#
+# 21.03.13 : FABR
+# Adjusted doc to Mint 13 with kernel
+#
+# $ uname -a
+#Linux vmmint13-10 3.2.0-38-generic #60-Ubuntu SMP
+# Wed Feb 13 13:27:35 UTC 2013 i686 i686 i386 GNU/Linux
+
+############################################################
+# build
+
+make clean; make
+
+############################################################
+# Via debug and disassemble
+
+gdb -tui bin/lowlevel
+
+(gdb) break main
+(gdb) run 
+(gdb) layout asm
+
+On a 64bit machine the code for syscall open is 0x2
+On a 32bit machine the code for syscall open is 0x5
+
+(gdb) stepi
+	now watch the execution of single machine instructions
+	until you reach the code
+
+0x8057f10 <open>                cmpl   $0x0,%gs:0xc        
+0x8057f18 <open+8>              jne    0x8057f3f <open+47>
+0x8057f1a <__open_nocancel>     push   %ebx              
+0x8057f1b <__open_nocancel+1>   mov    0x10(%esp),%edx  
+0x8057f1f <__open_nocancel+5>   mov    0xc(%esp),%ecx  
+0x8057f23 <__open_nocancel+9>   mov    0x8(%esp),%ebx 
+0x8057f27 <__open_nocancel+13>  mov    $0x5,%eax     
+0x8057f2c <__open_nocancel+18>  call   *0x80efa04   
+
+The 'call   *0x80efa04' is a syscall wrapper
+See file WhatIs_kernel_vsyscall.txt for more details
+
+Step into the VDSO wrapper:
+
+(gdb) stepi
+0x110414 <__kernel_vsyscall>    int    $0x80 
+0x110416 <__kernel_vsyscall+2>  ret         
+
+
+Quit demo here.
+
+Switch off tui mode via 'Ctrl-x a'.
+Then quit GDB with 'Ctrl-d'.
+
+Otherwise you may get an error report like this:
+'Assertion `gdbarch != NULL'
+Ignore error and do not opt for writing a core file.
+Just quit with 'Ctrl-d'.
+

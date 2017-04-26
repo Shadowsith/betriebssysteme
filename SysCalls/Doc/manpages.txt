@@ -1,0 +1,8 @@
+$ man 2 intro
+$ man 2 syscalls
+$ man libc
+
+$ man 3 intro
+
+$ man standards
+$ man man

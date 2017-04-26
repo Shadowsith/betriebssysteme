@@ -1,0 +1,82 @@
+#----------------------------------------------------------------------------
+Zunächst einmal nur in einem Fenster aufrufen (ohne Debugger)
+
+$ bin/virtualMemory1 
+Speicheradressen:
+                         Adress main()    0x8048ee0
+             Ende Code Segment (etext)    0x80c5a82
+                             Adresse i    0x80ef068
+     Ende initialisierte Daten (edata)    0x80efca0
+                             Adresse g    0x80f114c
+     Ende uninitialisierte Daten (end)    0x80f138c
+           Adresse von Integer im Heap    0x97cd718
+                             Adresse n   0xbf908b78
+
+An der Ausgabe kann man sehen, dass das Bild zur Speicherbelegung der
+Vorlesung korrekt ist.
+
+#-----------------------------------------------------------------------------
+
+Aufruf:
+
+In zwei nebeneinander liegendes Shell-Fenstern den GDB aufrufen.
+
+
+lars@vmmint13-ss14:~/Bs/CodeExamples/SysCalls
+$ gdbtui -q bin/virtualMemory1
+
+(gdb) break main
+(gdb) run
+
+   │13      int main () {                                                │
+   │14        // Eine lokale Variable                                    │
+B+>│15        int n=2;                                                   │
+
+
+(gdb) next
+(gdb)      (mehrmals)
+
+   │22        *pv = 4;                                                      │
+   │23                                                                      │
+  >│24        printf("Speicheradressen:\n");                                │
+   │25        printf("                         Adress main() %12p\n", &main)│
+
+
+Nun Adressen und Inhalte der Speicherobjelte untersuchen:
+
+(gdb) p &g
+$1 = (int *) 0x80f114c
+(gdb) p g
+$2 = 3
+
+In beiden Prozessen hat g erwartungsgemaess den gleichen Wert.
+Die Adresse von g ist aber auch gleich !
+
+Nun in Prozess 1 (beliebig welcher) den Wert der Variablen g aendern.
+
+(gdb) p g=42
+$3 = 42
+
+Danach wieder in beiden Prozessen den Wert und die Adresse ausgeben
+
+Prozess 1:
+
+(gdb) p &g
+$4 = (int *) 0x80f114c
+(gdb) p g
+$5 = 42
+
+Prozess 2:
+
+(gdb) p &g
+$3 = (int *) 0x80f114c
+(gdb) p g
+$4 = 3
+
+Folgerung:
+Bei den angezeogten Adressen kann es sich nicht um physikalische Adressen
+handeln, denn in beiden Prozessen sind die Adressen gleich, die Werte
+jedoch unterschiedlich !
+
+q.e.d.
+

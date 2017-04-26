@@ -1,0 +1,82 @@
+####################################################################
+# Inspection of assembler code and debugging of example
+# do_getpid32.c
+# do_getpid64.c
+#
+# Learn
+#   - to do a syscall directly via assembler code
+#   - that doing so may crash your system if your program is wrong or you
+#     on the wrong machine (32/64)
+#
+# 01.04.12 : FABR
+# Force static linking of libc
+# Otherwise the code for the library function is not included in the binary.
+#
+# 21.03.13 : FABR
+# Update for Linux Mint an kernel 3.5
+
+###############################################################
+# build
+
+make clean; make
+
+#--------------------------------------------------------------
+# On a 64 bit machine
+#--------------------------------------------------------------
+
+############################################################
+# debug and disassemble
+# ATTENTION: do not run bin/do_getpid64 on a 32bit machine!!
+
+gdb -tui bin/do_getpid64
+
+(gdb) break main
+(gdb) break 36
+(gdb) break 39
+(gdb) run 
+(gdb) layout asm
+
+0x401184 <main+4>               mov    $0x27,%eax
+0x401189 <main+9>               syscall         
+0x40118b <main+11>              mov    %eax,0x6c4eb0
+
+(gdb) stepi
+	now watch the execution of single machine instructions
+	until you reach the code after the syscall
+
+0x40118b <main+11>              mov    %eax,0x6c4eb0
+
+Inspect contents of register eax:
+
+(gdb) p $eax
+$3 = 1536
+
+(gdb) cont
+(gdb) cont
+Continuing.
+Via assembler code: pid is 1536
+
+0x4011a9 <main+41>              callq  0x40ef30 <getpid> 
+0x4011ae <main+46>              mov    %eax,%esi 
+
+(gdb) stepi  (several times)
+
+0x40ef50 <getpid+32>            jne    0x40ef3f <getpid+15> 
+0x40ef52 <getpid+34>            mov    $0x27,%eax  
+0x40ef57 <getpid+39>            syscall 
+0x40ef59 <getpid+41>            test   %edx,%edx 
+
+(gdb) p $eax
+
+$6 = 1536
+(gdb) cont
+Continuing.
+Via syscall: pid is 1536
+
+Quit demo here
+
+Switch off tui mode via 'Ctrl-x a'. Then quit.
+Otherwise you may get an error report like this:
+'Assertion `gdbarch != NULL'
+Ignore error and do not opt for writing a core file.
+Just quit via 'Ctrl-d'

@@ -1,0 +1,94 @@
+####################################################################
+# Insepction of assembler code and debugging of example highlevel.c
+# Learn how portable C-library functions call syscall interface.
+#
+# 01.04.12 : FABR
+# Force static linking of libc
+# Otherwise the code for the library function is not included in the binary.
+#
+# 21.03.13 : FABR
+# Adjusted to Mint 13/14 and kernel 3.x
+
+############################################################
+# build
+
+make clean; make
+
+############################################################
+# debug and disassemble
+
+gdb -tui bin/highlevel
+
+Finding the correct path to the syscall open via stepi/nexti is a bit tricky
+since there are man diversions ins the c-lib function fopen.
+
+Take this as a route:
+#0  0x0805c550 in open ()
+#1  0x0804cccd in _IO_file_open ()
+#2  0x0804d248 in _IO_new_file_fopen ()
+#3  0x08049d41 in __fopen_internal ()
+#4  0x08049daf in fopen ()
+#5  0x08048f13 in main () at highlevel.c:9
+
+For a safeguard, set break points as well:
+
+(gdb) break main
+(gdb) break fopen
+(gdb) break open
+
+(gdb) run 
+(gdb) layout asm
+
+Either use stepi/nexti with the route above or cheat using
+the breakpoints via cont
+
+(gdb) cont
+
+0x8049d90 <fopen>       sub    $0x1c,%esp     
+0x8049d93 <fopen+3>     mov    0x24(%esp),%eax
+
+(gdb) cont
+
+0x805c550 <open>                cmpl   $0x0,%gs:0xc   
+0x805c558 <open+8>              jne    0x805c57f <open+47>
+0x805c55a <__open_nocancel>     push   %ebx            
+0x805c55b <__open_nocancel+1>   mov    0x10(%esp),%edx
+0x805c55f <__open_nocancel+5>   mov    0xc(%esp),%ecx
+0x805c563 <__open_nocancel+9>   mov    0x8(%esp),%ebx 
+0x805c567 <__open_nocancel+13>  mov    $0x5,%eax     
+0x805c56c <__open_nocancel+18>  call   *0x80efa04   
+
+The 'call   *0x80efa04' is the VDSO wrapper for syscalls.
+See file WhatIs_kernel_vsyscall.txt for more details
+
+Step into the VDSO call via stepi
+
+0x110414 <__kernel_vsyscall>    int    $0x80 
+0x110416 <__kernel_vsyscall+2>  ret         
+
+Right before the syscall inspect registers.
+  Register $eax holds the syscall number
+  Register $ebx contains a pointer to the filename
+
+(gdb) x /s $ebx
+0x49678a:       "DerWerwolf.txt"
+
+(gdb) where
+#0  0x00110414 in __kernel_vsyscall ()
+#1  0x0805c572 in __open_nocancel ()
+#2  0x0804cccd in _IO_file_open ()
+#3  0x0804d248 in _IO_new_file_fopen ()
+#4  0x08049d41 in __fopen_internal ()
+#5  0x08049daf in fopen ()
+#6  0x08048f13 in main () at highlevel.c:9
+
+Quit demo here.
+
+Switch off tui mode via 'Ctrl-x a'.
+Then quit GDB with 'Ctrl-d'.
+
+Otherwise you may get an error report like this:
+'Assertion `gdbarch != NULL'
+Ignore error and do not opt for writing a core file.
+Just quit with 'Ctrl-d'.
+

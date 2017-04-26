@@ -1,0 +1,21 @@
+make clean; make
+
+# Run p1, wait at input
+
+bin/p1
+
+# Show system map
+# Explain flags; man proc (section maps)
+
+less /proc/`pidof bin/p1`/maps
+
+e.g.
+less /proc/3625/maps
+
+# Show process state
+# VIRT and RES
+
+top -p `pidof bin/p1`
+
+
+

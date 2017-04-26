@@ -1,0 +1,19 @@
+# 01.04.12 : FABR
+# Force static linking of libc
+# Otherwise the code for the library function is not included in the binary.
+
+############################################################
+# build
+
+make clean; make
+
+
+Output:
+rm -rf bin
+mkdir bin
+gcc -g -static -mpush-args -mno-accumulate-outgoing-args -Wall highlevel.c -o bin/highlevel
+gcc -g -static -mpush-args -mno-accumulate-outgoing-args -Wall lowlevel.c -o bin/lowlevel
+gcc -g -static -mpush-args -mno-accumulate-outgoing-args -Wall do_getpid32.c -o bin/do_getpid32
+gcc -g -static -mpush-args -mno-accumulate-outgoing-args -Wall do_getpid64.c -o bin/do_getpid64
+gcc -g -static -mpush-args -mno-accumulate-outgoing-args -Wall sizeof.c -o bin/sizeof
+

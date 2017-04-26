@@ -1,0 +1,79 @@
+On Linux Kernels >= 2.5 system calls are (at least on 32bit architectures)
+wrapped into a special function kernel_vsyscall.
+
+This is code generated dynamically by the kernel during the system startup (boot).
+The code is mapped into the virtual address space of every process using the VDSO technique.
+
+VDSO: Virtual Dynamically-linked Shared Object
+
+At boot time the kernel detects the fasted method available to enter
+the kernel. Its decision is wrapped into function kernel_vsyscall.
+
+Learn more about it at:
+  http://www.trilithium.com/johan/2005/08/linux-gate/
+
+
+On a 3.2 kernel on a 32bit virtual machine, the code might look like this:
+(Mint13, kernel 3.2 in VMware image)
+
+  0x110414 <__kernel_vsyscall>    int    $0x80  
+  0x110416 <__kernel_vsyscall+2>  ret    
+
+This system uses the int 0x80 and not the 
+  sysenter
+instruction.
+
+The same result may be obtained on 32bit Pentium 6 machines.
+
+However, on some other 32bit machine the kernel may generate the following
+wrapper code for the call gate (EEPC with Atom processor, 3.2 kernel):
+
+0xb7fff414 <__kernel_vsyscall>          push   %ecx
+0xb7fff415 <__kernel_vsyscall+1>        push   %edx
+0xb7fff416 <__kernel_vsyscall+2>        push   %ebp
+0xb7fff417 <__kernel_vsyscall+3>        mov    %esp,%ebp
+0xb7fff419 <__kernel_vsyscall+5>        sysenter
+0xb7fff41b <__kernel_vsyscall+7>        nop
+0xb7fff41c <__kernel_vsyscall+8>        nop
+0xb7fff41d <__kernel_vsyscall+9>        nop
+0xb7fff41e <__kernel_vsyscall+10>       nop
+0xb7fff41f <__kernel_vsyscall+11>       nop
+0xb7fff420 <__kernel_vsyscall+12>       nop
+0xb7fff421 <__kernel_vsyscall+13>       nop
+0xb7fff422 <__kernel_vsyscall+14>       int    $0x80
+0xb7fff424 <__kernel_vsyscall+16>       pop    %ebp
+0xb7fff425 <__kernel_vsyscall+17>       pop    %edx
+0xb7fff426 <__kernel_vsyscall+18>       pop    %ecx
+0xb7fff427 <__kernel_vsyscall+19>       ret
+
+Note the 'sysenter' instruction, which constitutes the system call.
+The system call returns to instruction
+
+0xb7fff424 <__kernel_vsyscall+16>       pop    %ebp
+0xb7fff425 <__kernel_vsyscall+17>       pop    %edx
+0xb7fff426 <__kernel_vsyscall+18>       pop    %ecx
+0xb7fff427 <__kernel_vsyscall+19>       ret
+
+The instructions
+0xb7fff41b <__kernel_vsyscall+7>        nop
+0xb7fff41c <__kernel_vsyscall+8>        nop
+0xb7fff41d <__kernel_vsyscall+9>        nop
+0xb7fff41e <__kernel_vsyscall+10>       nop
+0xb7fff41f <__kernel_vsyscall+11>       nop
+0xb7fff420 <__kernel_vsyscall+12>       nop
+0xb7fff421 <__kernel_vsyscall+13>       nop
+0xb7fff422 <__kernel_vsyscall+14>       int    $0x80
+
+are never reached.
+
+On the other hand, on 64bit architectures there is no VDSO gate used.
+You may see the following code
+
+00x417267 <open64+7>            jne    0x41727d <open64+29>
+0x417269 <__open_nocancel>      mov    $0x2,%eax
+0x41726e <__open_nocancel+5>    syscall
+0x417270 <__open_nocancel+7>    cmp    $0xfffffffffffff001,%rax
+
+Note the instruction 'syscall' wich is called directly from within the
+entry code of the system call function in the C-lib.
+

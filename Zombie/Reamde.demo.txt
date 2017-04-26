@@ -1,0 +1,63 @@
+Demo of Zombie Processes
+Author: FABR
+06.04.2013
+
+Build: make clean; make
+Usage: bin/makeZombie
+
+Preparation:
+Open 2 Terminals
+
+Inspect the process tree of the calling shell
+
+pstree -s -p $$
+
+or with option -A for ASCII graphics
+pstree -A -s -p $$
+
+init(1)---mate-terminal(5143)---bash(6061)---pstree(6228)
+
+Pick the process of the mate-terminal (here 5143) and execute
+pstree -A -s -p 5143 -H $$
+
+Demo:
+Terminal 1:
+
+$ pstree -s -p 5143 -H $$
+
+init(1)---mate-terminal(5143)-+-bash(5149)
+                              |-bash(5524)
+                              |-bash(6061)---pstree(6351)
+                              |-bash(6250)
+                              |-gnome-pty-helpe(5148)
+                              |-{mate-terminal}(5147)
+                              `-{mate-terminal}(5150)
+
+Terminal 2:
+
+$ bin/makeZombie 
+A new window with a running 'top' appears.
+Output in terminal 2:
+
+Child: my PID is 6368
+Parent: terminal process died normally with status: 0
+Parent: ignoring my child 6368 for 20 seconds
+Parent: my PID is 6367
+Child: Now, I will become a zombie: bye
+Parent: now I am reaping the exit status of my dead child
+Parent: Done
+
+In Terminal 1, update pstree
+
+init(1)---mate-terminal(5143)-+-bash(5149)
+                              |-bash(5524)
+                              |-bash(5951)---vi(6203)---{vi}(6204)
+                              |-bash(6061)---pstree(6373)
+                              |-bash(6250)---makeZombie(6367)---makeZombie(6368)
+                              |-gnome-pty-helpe(5148)
+                              |-top(6366)
+                              |-top(6372)
+                              |-{mate-terminal}(5147)
+                              `-{mate-terminal}(5150)
+
+

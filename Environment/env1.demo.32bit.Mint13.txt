@@ -1,0 +1,98 @@
+###################################
+# 01.04.12 FABR
+# Learn howto debug the environment list
+#
+# 22.03.2013
+# Update for SS2013
+
+make clean; make
+
+# run
+bin/env1 | less
+
+MATE_DESKTOP_SESSION_ID=this-is-deprecated
+SSH_AGENT_PID=2160
+GPG_AGENT_INFO=/tmp/keyring-Qldb0b/gpg:0:1
+TERM=xterm
+...
+
+######################
+# Debug
+
+gdb -tui bin/env1
+
+11      int main() {   
+12          int i;    
+13                   
+14          for (i=0; environ[i] != NULL; i++) {
+15              printf("%s\n", environ[i]);    
+16          }                                 
+17          exit(0);                         
+18      }                                   
+
+
+(gdb) break 15
+(gdb) run
+(gdb) layout asm
+
+
+B+>0x804847e <main+26>             mov    0x804a018,%eax  
+   0x8048483 <main+31>             mov    -0xc(%ebp),%edx 
+   0x8048486 <main+34>             shl    $0x2,%edx      
+
+ 
+The Instruction at the breakpoint loads the base address of the array environ
+into register
+
+$eax
+
+Execute the statement via stepi
+
+(gdb) stepi
+
+B+ 0x804847e <main+26>             mov    0x804a018,%eax  
+  >0x8048483 <main+31>             mov    -0xc(%ebp),%edx 
+   0x8048486 <main+34>             shl    $0x2,%edx      
+
+Here, switch off TUI mode in order to get more space:  Ctrl-X a
+
+Dump the array of pointers: on 32bit we use 'w' for 4 byte pointers
+
+x /48xw $eax
+
+0xbffff95c:     0xbffffb09      0xbffffb34      0xbffffb47      0xbffffb72
+0xbffff96c:     0xbffffb82      0xbffffb8d      0xbffffbdc      0xbffffc05
+0xbffff97c:     0xbffffc17      0xbffffc21      0xbffffc47      0xbffffc6f
+0xbffff98c:     0xbffffca3      0xbffffcb1      0xbffffd0d      0xbffffd18
+0xbffff99c:     0xbffffd46      0xbffffd5e      0xbffffdba      0xbffffdc9
+0xbffff9ac:     0xbffffdf4      0xbffffe05      0xbffffe3c      0xbffffe45
+0xbffff9bc:     0xbffffe60      0xbffffe70      0xbffffe78      0xbffffe85
+0xbffff9cc:     0xbffffee7      0xbfffff36      0xbfffff49      0xbfffff56
+0xbffff9dc:     0xbfffff63      0xbfffff78      0xbfffff9a      0x00000000
+0xbffff9ec:     0x00000020      0x00132414      0x00000021      0x00132000
+
+Note the NULL-Pointer in line
+0xbffff9dc:     0xbfffff63      0xbfffff78      0xbfffff9a      0x00000000
+
+(position may vary according to your env)
+
+Examine the strings the pointer point to
+
+(gdb) x /s 0xbffffb09
+0xbffffb09:      "MATE_DESKTOP_SESSION_ID=this-is-deprecated"
+(gdb) x /s 0xbffffee7
+0xbffffee7:      "XDG_DATA_DIRS=/usr/share/default:/usr/local/share/:/usr/sh
+are/:/usr/share/mdm/"
+(gdb) x /s 0xbfffff9a
+0xbfffff9a:      "COLORTERM=mate-terminal"
+
+...
+
+Quit demo here
+
+Addtional documentation explaining the global variable environ:
+
+man environ
+
+It is part of the exec* calls for process chaining.
+

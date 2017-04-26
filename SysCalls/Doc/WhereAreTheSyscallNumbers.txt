@@ -1,0 +1,21 @@
+If you checkout kernel sources of version > 3.4 , you will find that both
+  arch/x86/include/asm/unistd_32.h and
+  arch/x86/include/asm/unistd_64.h are gone.
+
+Instead, they are generated using arch/x86/syscalls
+
+==> In order to see the syscall id table you need to compile a kernel.
+
+As a result, the files
+  <kernel source>/arch/x86/syscalls/syscall_32.tbl
+  <kernel source>/arch/x86/syscalls/syscall_64.tbl
+are generated
+
+
+See directories 
+ linux-source-2.6.32
+ linux-source-3.5.0
+
+for the extracted lists
+
+
